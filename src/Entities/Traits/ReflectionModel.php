@@ -1,8 +1,8 @@
 <?php
 namespace Arrounded\Reflection\Entities\Traits;
 
-use Arrounded\Facades\Arrounded;
 use Auth;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use ReflectionClass;
 use ReflectionMethod;
@@ -23,7 +23,7 @@ trait ReflectionModel
      */
     public function belongsToCurrent()
     {
-        return Auth::check() && Auth::user()->id == $this->user_id;
+        return Auth::id() == $this->user_id;
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -60,84 +60,6 @@ trait ReflectionModel
         return class_basename($this->getClass());
     }
 
-    /**
-     * Get the application's namespace.
-     *
-     * @return string
-     */
-    public function getNamespace()
-    {
-        return Arrounded::getNamespace();
-    }
-
-    /**
-     * Get the model's available relations.
-     *
-     * @return array
-     */
-    public function getAvailableRelations()
-    {
-        $reflection = new ReflectionClass($this);
-
-        // Gather uninherited public methods
-        $relations = [];
-        $methods   = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
-        foreach ($methods as $method) {
-            if (
-                $method->getDeclaringClass()->getName() === $reflection->getName() &&
-                !Str::startsWith($method->getName(), ['get', 'scope'])
-            ) {
-                $relations[] = $method->getName();
-            }
-        }
-
-        return $relations;
-    }
-
-    //////////////////////////////////////////////////////////////////////
-    /////////////////////////// RELATED CLASSES //////////////////////////
-    //////////////////////////////////////////////////////////////////////
-
-    /**
-     * Get the presenter instance.
-     *
-     * @return string
-     */
-    public function getPresenter()
-    {
-        $service = $this->getRelatedClass('Presenter', $this->getNamespace().'\Presenters\DefaultPresenter');
-
-        return new $service($this);
-    }
-
-    /**
-     * Get the transformer instance.
-     *
-     * @return string
-     */
-    public function getTransformer()
-    {
-        $service = $this->getRelatedClass('Transformer', [
-            $this->getNamespace().'\Transformers\DefaultTransformer',
-            'Arrounded\Services\Transformers\DefaultTransformer',
-        ]);
-
-        return new $service();
-    }
-
-    /**
-     * Get a related class.
-     *
-     * @param string          $type
-     * @param string|string[] $default
-     *
-     * @return string
-     */
-    public function getRelatedClass($type, $default)
-    {
-        return Arrounded::getModelService($this->getClassBasename(), $type, $default);
-    }
-
     //////////////////////////////////////////////////////////////////////
     /////////////////////////////// TRAITS ///////////////////////////////
     //////////////////////////////////////////////////////////////////////
@@ -149,7 +71,7 @@ trait ReflectionModel
      */
     public function softDeletes()
     {
-        return $this->hasTrait('Illuminate\Database\Eloquent\SoftDeletingTrait');
+        return $this->hasTrait(SoftDeletes::class);
     }
 
     /**
@@ -161,21 +83,8 @@ trait ReflectionModel
      */
     public function hasTrait($trait)
     {
-        // Try both given name and fully qualified name
-        $places = [
-            'Arrounded\Traits\%s',
-            'Arrounded\Traits\Reflection\%s',
-            '%s',
-        ];
-
         $traits = class_uses_recursive($this->getClass());
-        foreach ($places as $place) {
-            $place = sprintf($place, $trait);
-            if (in_array($place, $traits)) {
-                return true;
-            }
-        }
 
-        return false;
+        return in_array($trait, $traits);
     }
 }

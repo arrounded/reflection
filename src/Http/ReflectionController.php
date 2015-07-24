@@ -1,5 +1,5 @@
 <?php
-namespace Arrounded\Reflection\Controllers;
+namespace Arrounded\Reflection\Http;
 
 use Arrounded\Controllers\Model;
 use Illuminate\Support\Str;
